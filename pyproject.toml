@@ -12,6 +12,39 @@ flask = "^3.0.0"
 requests = "^2.31.0"
 
 
+[tool.poetry.group.test.dependencies]
+black = "^23.10.1"
+flake8 = "^6.1.0"
+flake8-pyproject = "^1.2.3"
+isort = "^5.12.0"
+
+
+[tool.poetry.group.local]
+optional = true
+
+[tool.poetry.group.local.dependencies]
+pre-commit = "^3.5.0"
+
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+filename = ["./gistapi/*.py"]
+
+
+[tool.isort]
+py_version = 311
+profile = "black"
+line_length = 100
+known_first_party = ["gistapi"]
+src_paths = ["gistapi"]
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

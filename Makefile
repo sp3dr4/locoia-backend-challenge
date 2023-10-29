@@ -8,4 +8,20 @@ help: ## show this help
 
 .PHONY: install
 install: ## install dependencies
-	poetry install
+	poetry install --with local
+	poetry run pre-commit install
+
+.PHONY: isort
+isort:
+	poetry run isort . ${OPTIONS}
+
+.PHONY: black
+black:
+	poetry run black . ${OPTIONS}
+
+.PHONY: flake8
+flake8:
+	poetry run flake8 . ${OPTIONS}
+
+.PHONY: lint
+lint: isort black flake8 ## lint code
