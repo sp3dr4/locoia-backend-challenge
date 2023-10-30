@@ -31,5 +31,11 @@ test: ## run all tests except e2e
 	poetry run pytest -vv --cov-report term-missing --cov=gistapi
 
 .PHONY: run
-run:
+run: ## start the service locally
 	poetry run python gistapi/gistapi.py
+
+.PHONY: docker-run
+docker-run: ## start the service in a docker container
+	poetry export -f requirements.txt --output requirements.txt --only main --without-hashes
+	docker-compose up --build -d
+	rm requirements.txt
