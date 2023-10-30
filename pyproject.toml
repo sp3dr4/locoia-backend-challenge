@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "backend-coding-challenge"
+name = "gistapi"
 version = "0.1.0"
 description = ""
 authors = ["Simone Pedrazzi <pedra89@gmail.com>"]
@@ -14,9 +14,14 @@ requests = "^2.31.0"
 
 [tool.poetry.group.test.dependencies]
 black = "^23.10.1"
+factory-boy = "^3.3.0"
 flake8 = "^6.1.0"
 flake8-pyproject = "^1.2.3"
 isort = "^5.12.0"
+pytest = "^7.4.3"
+pytest-cov = "^4.1.0"
+responses = "^0.23.3"
+pytest-icdiff = "^0.8"
 
 
 [tool.poetry.group.local]
@@ -34,15 +39,15 @@ target-version = ['py311']
 [tool.flake8]
 max-line-length = 100
 extend-ignore = ["E203", "W503"]
-filename = ["./gistapi/*.py"]
+filename = ["./gistapi/*.py", "./tests/*.py"]
 
 
 [tool.isort]
 py_version = 311
 profile = "black"
 line_length = 100
-known_first_party = ["gistapi"]
-src_paths = ["gistapi"]
+known_first_party = ["gistapi", "tests"]
+src_paths = ["gistapi", "tests"]
 
 
 [build-system]

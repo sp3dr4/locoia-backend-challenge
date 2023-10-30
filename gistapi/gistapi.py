@@ -11,29 +11,35 @@ import inspect
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Self
+from typing import Any, Self
 
 import requests
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, make_response, request
 
 app = Flask(__name__)
 
 
-class DataclassBuilder:
-    @classmethod
-    def from_dict(cls, o: dict) -> Self:
-        return cls(**{k: v for k, v in o.items() if k in inspect.signature(cls).parameters})
+class UserNotFound(Exception):
+    pass
+
+
+class InvalidPattern(Exception):
+    pass
+
+
+def from_dict(cls, o: dict):
+    return cls(**{k: v for k, v in o.items() if k in inspect.signature(cls).parameters})
 
 
 @dataclass
-class GistFile(DataclassBuilder):
+class GistFile:
     filename: str
     language: str
     raw_url: str
 
 
 @dataclass
-class Gist(DataclassBuilder):
+class Gist:
     id: str
     html_url: str
     files: list[GistFile]
@@ -46,6 +52,14 @@ class Gist(DataclassBuilder):
             self.created_at = datetime.fromisoformat(self.created_at)
         if self.updated_at and isinstance(self.updated_at, str):
             self.updated_at = datetime.fromisoformat(self.updated_at)
+
+    @classmethod
+    def from_dict(cls, o: dict) -> Self:
+        files = [from_dict(GistFile, v) for v in o["files"].values()]
+        return from_dict(cls, o | {"files": files})
+
+    def dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 @app.route("/ping")
@@ -70,21 +84,30 @@ def gists_for_user(username: str) -> list[Gist]:
     """
     gists_url = f"https://api.github.com/users/{username}/gists"
     response = requests.get(gists_url)
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as err:
+        if getattr(err.response, "status_code", "") == 404:
+            raise UserNotFound(f"no user found with name {username}")
+        raise err
     gists: list[Gist] = []
     for x in response.json():
-        files = [GistFile.from_dict(v) for v in x["files"].values()]
-        gist = Gist.from_dict(x | {"files": files})
-        gists.append(gist)
+        gists.append(Gist.from_dict(x))
     return gists
 
 
-def search_gist(gist: Gist, pattern: re.Pattern) -> bool:
+def search_gist(gist: Gist, pattern: str) -> bool:
+    try:
+        compiled = re.compile(pattern)
+    except re.error as err:
+        raise InvalidPattern(f"invalid pattern {pattern}: {err}")
+
     for file in gist.files:
         with requests.get(file.raw_url, stream=True) as r:
             if r.encoding is None:
                 r.encoding = "utf-8"
             for line in r.iter_lines(decode_unicode=True):
-                if line and pattern.match(line):
+                if line and compiled.match(line):
                     return True
     return False
 
@@ -105,22 +128,33 @@ def search():
 
     username = post_data["username"]
     pattern = post_data["pattern"]
-    compiled = re.compile(pattern)
 
-    result = {}
-    gists = gists_for_user(username)
+    result: dict[str, Any] = {
+        "status": "success",
+        "username": username,
+        "pattern": pattern,
+        "matches": [],
+    }
+    status = 200
 
-    matches = []
-    for gist in gists:
-        if search_gist(gist, compiled):
-            matches.append(asdict(gist))
+    try:
+        if not (gists := gists_for_user(username)):
+            result["status"] = "failure"
+            result["error"] = "user has no gists"
+        else:
+            for gist in gists:
+                if search_gist(gist, pattern):
+                    result["matches"].append(gist.dict())
+    except UserNotFound as err:
+        result["status"] = "failure"
+        result["error"] = str(err)
+        status = 404
+    except InvalidPattern as err:
+        result["status"] = "failure"
+        result["error"] = str(err)
+        status = 422
 
-    result["status"] = "success"
-    result["username"] = username
-    result["pattern"] = pattern
-    result["matches"] = matches
-
-    return jsonify(result)
+    return make_response(jsonify(result), status)
 
 
 if __name__ == "__main__":

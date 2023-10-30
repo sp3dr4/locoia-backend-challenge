@@ -25,3 +25,11 @@ flake8:
 
 .PHONY: lint
 lint: isort black flake8 ## lint code
+
+.PHONY: test
+test: ## run all tests except e2e
+	poetry run pytest -vv --cov-report term-missing --cov=gistapi
+
+.PHONY: run
+run:
+	poetry run python gistapi/gistapi.py
