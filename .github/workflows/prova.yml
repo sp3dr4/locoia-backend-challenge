@@ -1,0 +1,22 @@
+name: Prova
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        required: true
+
+jobs:
+  prova:
+    runs-on: ubuntu-latest
+    environment: 
+      name: ${{ inputs.environment }}
+
+    steps:
+      - name: Echo the chosen environment
+        run: |
+          echo "Selected environment: ${{ inputs.environment }}"
+      - name: Echo environment variables
+        run : |
+          echo "variable: ${{ vars.FOO }} --- secret: ${{ secrets.BAR }}"
