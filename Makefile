@@ -27,7 +27,7 @@ flake8:
 lint: isort black flake8 ## lint code
 
 .PHONY: test
-test: ## run all tests except e2e
+test: ## run all tests
 	poetry run pytest -vv --cov-report term-missing --cov=gistapi
 
 .PHONY: run
